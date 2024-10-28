@@ -1,0 +1,117 @@
+include:
+    # Metadata shared my many jobs
+    - local: .gitlab/artifacts.yml
+
+stages:
+  - build
+  #- quality_test
+  - test
+  - upload
+
+#针对Linux的构建和测试任务
+build_linux:
+  stage: build
+  tags:
+    - ubuntu18.04
+  script:
+    - chmod +x ./script/linux_before_build.sh
+    - chmod +x ./script/linux_build.sh
+    # - chmod +x ./script/upload.sh
+    - ./script/linux_before_build.sh
+    - ./script/linux_build.sh
+    # - ./script/upload.sh
+  
+
+  #  - cp ../bin/* ~/test_case/bin
+
+test_linux:
+  stage: test
+  tags:
+    - ubuntu18.04
+  script:
+    - chmod +x ./script/linux_test.sh
+    - ./script/linux_test.sh
+  needs:
+    - build_linux
+
+#针对Windows 11的构建和测试任务
+build_win11:
+  stage: build
+  tags:
+    - win11_2
+  script:
+    - ./script/win_before_build.bat
+    - ./script/win_build.bat
+  extends:
+    - .cmake_build_artifacts
+    # - ./script/win_after_build.ps1
+
+    
+# build_centos:
+#   stage: build
+#   tags:
+#     - centos7
+#   script:
+#     - chmod +x ./script/centos_before_build.sh
+#     - chmod +x ./script/linux_build.sh
+#     # - chmod +x ./script/upload.sh
+#     - scl enable devtoolset-11 -- bash ./script/centos_before_build.sh
+#     - scl enable devtoolset-11 -- bash ./script/linux_build.sh
+#     # - ./script/upload.sh
+
+test_win11:
+  stage: test
+  tags:
+    - win11_2
+  script:
+    - ./script/win_after_build_copy_testapi.bat
+  needs:
+    - build_win11
+
+      #build_linux2:
+      #stage: build
+      #  tags:
+      #- centos9
+      #script:
+      #   - chmod +x ./script/linux_before_build.sh
+      # - chmod +x ./script/linux_build.sh
+      #- ./script/linux_before_build.sh
+      #- ./script/linux_build.sh
+
+# test_linux2:
+#   stage: test
+#   tags:
+#     - centos9
+#   script:
+#     - pwd
+#     - echo "Testing the project on Linux..."
+#     - bash ~/test_case/bin/run.sh
+
+
+# build_linux:
+#   stage: build
+#   tags:
+#     - ubuntu18.04
+#   script:
+#     - chmod +x ./script/linux_before_build.sh
+#     - chmod +x ./script/linux_build.sh
+#     - chmod +x ./script/upload.sh
+#     - ./script/linux_before_build.sh
+#     - ./script/linux_build.sh
+#     - ./script/upload.sh
+
+
+
+upload:
+  stage: upload
+  tags:
+    - win11_2
+  script:
+    - ./script/allUpload.ps1
+  needs:
+    - build_linux
+    - build_win11
+    - test_linux
+    - test_win11
+  only:
+    - master
